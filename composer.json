@@ -1,0 +1,17 @@
+{
+	"name": "hblib/dbal",
+	"description": "",
+	"license": "MIT",
+	"require": {
+		"php": ">=8.0.0 <9",
+		"ext-pdo": "*"
+	},
+	"autoload": {
+		"psr-4": {
+			"HbLib\\DBAL\\": ["src"]
+		}
+	},
+	"require-dev": {
+		"phpstan/phpstan": "^0.12.64"
+	}
+}
