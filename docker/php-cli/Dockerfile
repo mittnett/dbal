@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install --no-install-recommends -yqq bash git unzi
     && useradd -u 911 -U -d /config -s /bin/bash abc \
     && usermod -G users abc \
     && mkdir -p /app /config \
+    && pecl install pcov \
     && apt-get clean \
     && rm -rf \
        	/tmp/* \
