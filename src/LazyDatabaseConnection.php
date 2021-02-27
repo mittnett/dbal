@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace HbLib\DBAL;
 
-use Closure;
-use PDO;
 use PDOStatement;
 
 class LazyDatabaseConnection implements DatabaseConnectionInterface
