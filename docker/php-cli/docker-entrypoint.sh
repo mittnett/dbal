@@ -18,5 +18,5 @@ if [ "$#" = 0 ] ; then
 	exit 0
 fi
 
-exec "$@"
-
+exec /bin/su - abc \
+  /bin/bash -c "cd $(pwd) && $*"
