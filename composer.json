@@ -1,17 +1,20 @@
 {
-	"name": "hblib/dbal",
-	"description": "",
-	"license": "MIT",
-	"require": {
-		"php": ">=8.0.0 <9",
-		"ext-pdo": "*"
-	},
-	"autoload": {
-		"psr-4": {
-			"HbLib\\DBAL\\": ["src"]
-		}
-	},
-	"require-dev": {
-		"phpstan/phpstan": "^0.12.64"
-	}
+  "name": "hblib/dbal",
+  "description": "",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.0.0 <9",
+    "ext-pdo": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "HbLib\\DBAL\\": ["src"],
+      "HbLib\\DBAL\\Tests\\": ["tests"]
+    }
+  },
+  "require-dev": {
+    "phpstan/phpstan": "^0.12.64",
+    "phpunit/phpunit": "^9.5",
+    "roave/security-advisories": "dev-latest"
+  }
 }

@@ -3,8 +3,10 @@
 namespace HbLib\DBAL\Query;
 
 use HbLib\DBAL\DatabaseConnectionInterface;
+use InvalidArgumentException;
 use LogicException;
 use PDOStatement;
+use RuntimeException;
 use function count;
 use function implode;
 
@@ -76,7 +78,7 @@ final class QueryBuilder
     public function setParameter(string $name, mixed $value): void
     {
         if (str_starts_with($name, ':') === true) {
-            throw new LogicException('Name should not start with colon');
+            throw new InvalidArgumentException('Name should not start with colon');
         }
 
         $this->parameters[] = new Parameter($name, $value);
@@ -153,7 +155,7 @@ final class QueryBuilder
 
                 if (is_array($parameterValue) === true) {
                     if (count($parameterValue) === 0) {
-                        throw new LogicException('Array parameter is empty!');
+                        throw new RuntimeException('Array parameter is empty!');
                     }
 
                     $sqlParameterReplacements[$parameterName] = '?' . str_repeat(',?', count($parameterValue) - 1);
@@ -186,7 +188,7 @@ final class QueryBuilder
                     continue;
                 }
 
-                throw new LogicException('Unhandled type ' . gettype($parameterValue));
+                throw new RuntimeException('Unhandled type ' . gettype($parameterValue));
             }
         }
 

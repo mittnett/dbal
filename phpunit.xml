@@ -1,0 +1,12 @@
+<phpunit>
+    <coverage>
+        <include>
+            <directory suffix=".php">src</directory>
+        </include>
+    </coverage>
+    <testsuites>
+        <testsuite name="unit">
+            <directory phpVersion="8.0.0" phpVersionOperator=">=">tests</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>
