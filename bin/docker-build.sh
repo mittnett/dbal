@@ -3,4 +3,4 @@
 set -e
 
 cd ./docker/php-cli \
-  && DOCKER_BUILDKIT=1 docker build -t hbdbal:latest .
+	&& DOCKER_BUILDKIT=1 docker build -t hbdbal:latest .

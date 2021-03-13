@@ -10,5 +10,5 @@ docker run --rm \
 	--volume $(pwd):/app \
 	--workdir /app \
 	hbdbal:latest \
-  "$@"
+	"$@"
 
