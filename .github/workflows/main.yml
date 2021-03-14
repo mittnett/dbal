@@ -2,10 +2,58 @@ on: [push, pull_request]
 
 jobs:
   phpstan:
-    runs-on: ubuntu-latest
-    name: A job to run phpstan
+    name: "phpstan"
+    runs-on: "ubuntu-latest"
+
+    strategy:
+      matrix:
+        php-version:
+          - "8.0"
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: phpstan
-        uses: ./docker/action-phpstan
+      - name: "Checkout"
+        uses: "actions/checkout@v2"
+
+      - name: "Install PHP"
+        uses: "shivammathur/setup-php@v2"
+        with:
+          coverage: "none"
+          php-version: "${{ matrix.php-version }}"
+
+      - name: "Validate Composer"
+        run: "composer validate"
+
+      - name: "Install dependencies"
+        run: "composer install --no-interaction --no-progress --no-ansi --no-suggest"
+
+      - name: "Phpstan"
+        run: "vendor/bin/phpstan analyse"
+
+  phpunit:
+    name: "phpunit"
+    runs-on: "ubuntu-latest"
+
+    strategy:
+      matrix:
+        php-version:
+          - "8.0"
+
+    steps:
+      - name: "Checkout"
+        uses: "actions/checkout@v2"
+
+      - name: "Install PHP"
+        uses: "shivammathur/setup-php@v2"
+        with:
+          coverage: "none"
+          php-version: "${{ matrix.php-version }}"
+
+      - name: "Validate Composer"
+        run: "composer validate"
+
+      - name: "Install dependencies"
+        run: "composer install --no-interaction --no-progress --no-ansi --no-suggest"
+
+      - name: "phpunit"
+        run: "vendor/bin/phpunit"
+

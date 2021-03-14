@@ -1,8 +1,0 @@
-# action.yml
-name: 'PHP'
-description: 'Greet someone and record the time'
-runs:
-  using: 'docker'
-  image: 'php-cli/Dockerfile'
-  args:
-    - vendor/bin/phpstan analyse
