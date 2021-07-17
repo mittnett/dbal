@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace HbLib\DBAL;
 
+use HbLib\DBAL\Driver\DriverInterface;
 use LogicException;
 use PDO;
 use PDOStatement;
@@ -10,14 +11,20 @@ use PDOStatement;
 class DatabaseConnection implements DatabaseConnectionInterface
 {
     public function __construct(
-        private PDO $pdo
+        private PDO $pdo,
+        private DriverInterface $driver,
     ) {
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     }
 
-    public function getLastInsertId(): string
+    public function getDriver(): DriverInterface
     {
-        return $this->pdo->lastInsertId();
+        return $this->driver;
+    }
+
+    public function getLastInsertId(?string $name = null): string
+    {
+        return $this->pdo->lastInsertId($name);
     }
 
     /**

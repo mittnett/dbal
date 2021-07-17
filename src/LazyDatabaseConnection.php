@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace HbLib\DBAL;
 
+use HbLib\DBAL\Driver\DriverInterface;
 use PDOStatement;
 
 class LazyDatabaseConnection implements DatabaseConnectionInterface
@@ -33,19 +34,9 @@ class LazyDatabaseConnection implements DatabaseConnectionInterface
         }
     }
 
-    /**
-     * Calls the db connection factory to establish the database connection.
-     */
-    private function getOrMakeDatabaseConnection(): DatabaseConnectionInterface
+    public function getDriver(): DriverInterface
     {
-        $dbConnection = $this->dbConnection;
-
-        if ($dbConnection === null) {
-            $dbConnection = ($this->dbConnectionFactory)();
-            $this->dbConnection = $dbConnection;
-        }
-
-        return $dbConnection;
+        return ($this->dbConnection ??= ($this->dbConnectionFactory)())->getDriver();
     }
 
     /**
@@ -53,7 +44,7 @@ class LazyDatabaseConnection implements DatabaseConnectionInterface
      */
     public function query(string $query): PDOStatement
     {
-        return $this->getOrMakeDatabaseConnection()->query($query);
+        return ($this->dbConnection ??= ($this->dbConnectionFactory)())->query($query);
     }
 
     /**
@@ -61,26 +52,26 @@ class LazyDatabaseConnection implements DatabaseConnectionInterface
      */
     public function prepare(string $query): PDOStatement
     {
-        return $this->getOrMakeDatabaseConnection()->prepare($query);
+        return ($this->dbConnection ??= ($this->dbConnectionFactory)())->prepare($query);
     }
 
-    public function getLastInsertId(): string
+    public function getLastInsertId(?string $name = null): string
     {
-        return $this->getOrMakeDatabaseConnection()->getLastInsertId();
+        return ($this->dbConnection ??= ($this->dbConnectionFactory)())->getLastInsertId($name);
     }
 
     public function beginTransaction(): bool
     {
-        return $this->getOrMakeDatabaseConnection()->beginTransaction();
+        return ($this->dbConnection ??= ($this->dbConnectionFactory)())->beginTransaction();
     }
 
     public function rollBack(): bool
     {
-        return $this->getOrMakeDatabaseConnection()->rollBack();
+        return ($this->dbConnection ??= ($this->dbConnectionFactory)())->rollBack();
     }
 
     public function commit(): bool
     {
-        return $this->getOrMakeDatabaseConnection()->commit();
+        return ($this->dbConnection ??= ($this->dbConnectionFactory)())->commit();
     }
 }
