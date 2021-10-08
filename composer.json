@@ -1,6 +1,6 @@
 {
   "name": "mittnett/dbal",
-  "description": "",
+  "description": "A very simple database abstraction layer. Uses PDO under-the-hood and supports mysql/mariadb and postgres.",
   "license": "MIT",
   "require": {
     "php": ">=8.0.0 <9",
@@ -10,6 +10,10 @@
     "phpstan/phpstan": "^0.12.64",
     "phpunit/phpunit": "^9.5",
     "roave/security-advisories": "dev-latest"
+  },
+  "suggest": {
+    "ext-pdo_mysql": "For MySQL driver",
+    "ext-pdo_pgsql": "For Postgres driver"
   },
   "autoload": {
     "psr-4": {
