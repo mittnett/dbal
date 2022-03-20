@@ -4,94 +4,128 @@ namespace HbLib\DBAL\Query;
 
 use HbLib\DBAL\DatabaseConnectionInterface;
 use InvalidArgumentException;
-use LogicException;
 use PDOStatement;
 use RuntimeException;
+use PDO;
 use function count;
 use function implode;
 
+/**
+ * @phpstan-type JoinMode 'INNER'|'LEFT'|'RIGHT'
+ */
 final class QueryBuilder
 {
-    /**
-     * @param string[] $selects
-     * @param Join[] $joinConditions
-     * @param string $from
-     * @param array<int, string|AndX> $whereConditions
-     * @param Parameter[] $parameters
-     * @param string[] $orderBy
-     * @param string[] $groupBy
-     * @param int|null $limit
-     * @param int|null $offset
-     */
+    /** @var Select[] */
+    private array $selects = [];
+    /** @var Join[] */
+    private array $joinConditions = [];
+    /** @var list<string|AndX> */
+    private array $whereConditions = [];
+    /** @var Parameter[] */
+    private array $parameters = [];
+    /** @var string[] */
+    private array $orderBy = [];
+    /** @var string[] */
+    private array $groupBy = [];
+    private ?int $limit = null;
+    private ?int $offset = null;
+
     public function __construct(
-        private array $selects = [],
         private string $from = '',
-        private array $joinConditions = [],
-        private array $whereConditions = [],
-        private array $parameters = [],
-        private array $orderBy = [],
-        private array $groupBy = [],
-        private ?int $limit = null,
-        private ?int $offset = null,
-    ) {
-        //
-    }
+        private ?string $fromAlias = null
+    ) { }
 
-    public function addSelect(string $select): void
+    public function addSelect(string $expr, ?string $alias = null): self
     {
-        $this->selects[] = $select;
+        $this->selects[] = new Select($expr, $alias);
+
+        return $this;
     }
 
-    public function setFrom(string $expr): void
+    public function setFrom(string $expr, ?string $alias = null): self
     {
         $this->from = $expr;
+        $this->fromAlias = $alias;
+
+        return $this;
     }
 
     /**
-     * @param string $join
-     * @param array<int, string|AndX> $conditions
+     * @phpstan-param JoinMode $join
+     * @param list<string|AndX> $conditions
      */
-    public function addJoinCondition(string $join, array $conditions): void
+    public function addJoinCondition(string $join, string $table, ?string $alias = null, array $conditions = []): self
     {
-        $this->joinConditions[] = new Join($join, $conditions);
+        $this->joinConditions[] = new Join($join, $table, $alias, $conditions);
+
+        return $this;
     }
 
-    public function addWhereCondition(string|AndX $condition): void
+    /**
+     * @param string|AndX $condition
+     * @return self
+     */
+    public function addWhereCondition(string|AndX $condition): self
     {
         $this->whereConditions[] = $condition;
+
+        return $this;
     }
 
-    public function addOrderBy(string $expr): void
+    /**
+     * @param string $expr
+     * @return self
+     */
+    public function addOrderBy(string $expr): self
     {
         $this->orderBy[] = $expr;
+
+        return $this;
     }
 
-    public function addGroupBy(string $field): void
+    public function addGroupBy(string $field): self
     {
         $this->groupBy[] = $field;
+
+        return $this;
     }
 
     /**
      * @param string $name
      * @param mixed $value
+     * @return self
      */
-    public function setParameter(string $name, mixed $value): void
+    public function setParameter(string $name, mixed $value): self
     {
         if (str_starts_with($name, ':') === true) {
             throw new InvalidArgumentException('Name should not start with colon');
         }
 
         $this->parameters[] = new Parameter($name, $value);
+
+        return $this;
     }
 
-    public function setLimit(?int $limit): void
+    /**
+     * @param int|null $limit
+     * @return self
+     */
+    public function setLimit(?int $limit): self
     {
         $this->limit = $limit;
+
+        return $this;
     }
 
-    public function setOffset(?int $offset): void
+    /**
+     * @param int|null $offset
+     * @return self
+     */
+    public function setOffset(?int $offset): self
     {
         $this->offset = $offset;
+
+        return $this;
     }
 
     /**
@@ -100,14 +134,16 @@ final class QueryBuilder
      */
     public function getSQL(): string
     {
-        $sql = 'SELECT ' . implode(', ', $this->selects) . ' FROM ' . $this->from;
+        $sql = 'SELECT ' . implode(', ', array_map(
+            fn (Select $select): string => $this->getExprWithAlias($select->expr, $select->alias),
+            $this->selects,
+        )) . ' FROM ' . $this->getExprWithAlias($this->from, $this->fromAlias);
 
         foreach ($this->joinConditions as $join) {
-            $sql .= " {$join->getExpr()}";
+            $sql .= ' ' . $join->join . ' JOIN ' . $this->getExprWithAlias($join->table, $join->alias);
 
-            $joinConditions = $join->getConditions();
-            if (count($joinConditions) > 0) {
-                $sql .= ' ON ' . $this->generateCondition(new AndX($joinConditions));
+            if (count($join->conditions) > 0) {
+                $sql .= ' ON ' . $this->generateCondition(new AndX($join->conditions));
             }
         }
 
@@ -124,19 +160,24 @@ final class QueryBuilder
         }
 
         if ($this->limit !== null) {
-            $sql .= ' LIMIT ' . ($this->offset !== null ? $this->offset . ', ' : '') . '' . $this->limit;
+            $sql .= ' LIMIT ' . ($this->offset !== null ? $this->offset . ', ' : '') . $this->limit;
         }
 
         return $sql;
     }
 
+    private function getExprWithAlias(string $mainExpr, ?string $alias): string
+    {
+        return $mainExpr . ($alias !== null ? ' AS ' . $alias : '');
+    }
+
     /**
-     * Create a prepared statement with parameters bound which can later be executed.
+     * Generates the appropriate SQL for execution in index 0, the parameters in a list in index 1, and
+     * the PDO::PARAM_* constants in index 2.
      *
-     * @param DatabaseConnectionInterface $connection
-     * @return PDOStatement
+     * @phpstan-return array{string, list<mixed>, list<int>}
      */
-    public function createStatement(DatabaseConnectionInterface $connection): PDOStatement
+    public function generateSQLAndParameters(): array
     {
         $sql = $this->getSQL();
 
@@ -147,11 +188,11 @@ final class QueryBuilder
         if (preg_match_all('/:[a-z0-9_-]+/ui', $sql, $matches) > 0) {
             $parametersByKey = [];
             foreach ($this->parameters as $parameter) {
-                $parametersByKey[':' . $parameter->getName()] = $parameter;
+                $parametersByKey[':' . $parameter->name] = $parameter;
             }
 
             foreach ($matches[0] as $parameterName) {
-                $parameterValue = $parametersByKey[$parameterName]->getValue();
+                $parameterValue = $parametersByKey[$parameterName]->value;
 
                 if (is_array($parameterValue) === true) {
                     if (count($parameterValue) === 0) {
@@ -162,7 +203,7 @@ final class QueryBuilder
 
                     foreach ($parameterValue as $value) {
                         $sqlParameters[] = $value;
-                        $sqlParameterTypes[] = is_int($value) === true ? \PDO::PARAM_INT : \PDO::PARAM_STR;
+                        $sqlParameterTypes[] = is_int($value) === true ? PDO::PARAM_INT : PDO::PARAM_STR;
                     }
 
                     continue;
@@ -172,19 +213,19 @@ final class QueryBuilder
 
                 if (is_bool($parameterValue) === true) {
                     $sqlParameters[] = $parameterValue === true ? 1 : 0;
-                    $sqlParameterTypes[] = \PDO::PARAM_INT;
+                    $sqlParameterTypes[] = PDO::PARAM_INT;
                     continue;
                 }
 
                 if (is_string($parameterValue) === true || is_float($parameterValue) === true) {
                     $sqlParameters[] = (string) $parameterValue;
-                    $sqlParameterTypes[] = \PDO::PARAM_STR;
+                    $sqlParameterTypes[] = PDO::PARAM_STR;
                     continue;
                 }
 
                 if (is_int($parameterValue) === true) {
                     $sqlParameters[] = $parameterValue;
-                    $sqlParameterTypes[] = \PDO::PARAM_INT;
+                    $sqlParameterTypes[] = PDO::PARAM_INT;
                     continue;
                 }
 
@@ -192,8 +233,22 @@ final class QueryBuilder
             }
         }
 
-        $sql = strtr($sql, $sqlParameterReplacements);
-        unset($sqlParameterReplacements);
+        return [
+            strtr($sql, $sqlParameterReplacements),
+            $sqlParameters,
+            $sqlParameterTypes,
+        ];
+    }
+
+    /**
+     * Create a prepared statement with parameters bound which can later be executed.
+     *
+     * @param DatabaseConnectionInterface $connection
+     * @return PDOStatement
+     */
+    public function createStatement(DatabaseConnectionInterface $connection): PDOStatement
+    {
+        [$sql, $sqlParameters, $sqlParameterTypes] = $this->generateSQLAndParameters();
 
         $stmt = $connection->prepare($sql);
 
@@ -207,10 +262,10 @@ final class QueryBuilder
     private function generateCondition(string|AndX $condition): string
     {
         if ($condition instanceof AndX) {
-            // and or or grouping.
+            // 'and' or 'or' grouping.
 
             $parts = [];
-            foreach ($condition->getParts() as $part) {
+            foreach ($condition->parts as $part) {
                 $parts[] = $this->generateCondition($part);
             }
 

@@ -4,6 +4,7 @@ namespace HbLib\DBAL\Tests;
 
 use HbLib\DBAL\DatabaseConnection;
 use HbLib\DBAL\DatabaseConnectionInterface;
+use HbLib\DBAL\Driver\MySQLDriver;
 use HbLib\DBAL\LazyDatabaseConnection;
 use LogicException;
 use PDO;
@@ -18,7 +19,7 @@ class LazyDatabaseConnectionTest extends TestCase
         $pdo->expects(self::never())->method('setAttribute');
         $pdo->expects(self::never())->method('query');
 
-        $databaseConnection = new LazyDatabaseConnection(static fn (): DatabaseConnectionInterface => new DatabaseConnection($pdo));
+        $databaseConnection = new LazyDatabaseConnection(static fn (): DatabaseConnectionInterface => new DatabaseConnection($pdo, new MySQLDriver()));
     }
 
     public function testFactoryCalledOnQueryAndThenCached(): void
@@ -32,7 +33,7 @@ class LazyDatabaseConnectionTest extends TestCase
         $pdo->expects(self::once())->method('lastInsertId')->willReturn('2');
         $pdo->expects(self::once())->method('prepare')->with('SELECT u.id FROM users')->willReturn($this->createMock(PDOStatement::class));
 
-        $databaseConnection = new LazyDatabaseConnection(static fn (): DatabaseConnectionInterface => new DatabaseConnection($pdo));
+        $databaseConnection = new LazyDatabaseConnection(static fn (): DatabaseConnectionInterface => new DatabaseConnection($pdo, new MySQLDriver()));
         $databaseConnection->query('SELECT u.id FROM users');
         $databaseConnection->query('SELECT u.id FROM users');
 

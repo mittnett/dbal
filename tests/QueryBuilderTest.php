@@ -3,12 +3,11 @@
 namespace HbLib\DBAL\Tests;
 
 use HbLib\DBAL\DatabaseConnection;
+use HbLib\DBAL\Driver\MySQLDriver;
 use HbLib\DBAL\Query\AndX;
-use HbLib\DBAL\Query\Join;
 use HbLib\DBAL\Query\OrX;
 use HbLib\DBAL\Query\QueryBuilder;
 use InvalidArgumentException;
-use LogicException;
 use PDO;
 use PDOStatement;
 use PHPUnit\Framework\TestCase;
@@ -21,7 +20,7 @@ class QueryBuilderTest extends TestCase
     {
         $qb = new QueryBuilder();
         $qb->addSelect('u.id');
-        $qb->setFrom('users AS u');
+        $qb->setFrom('users', 'u');
         $qb->addWhereCondition('u.id IN(:ids)');
 
         self::assertSame(
@@ -60,22 +59,18 @@ class QueryBuilderTest extends TestCase
 
     public function testJoin(): void
     {
-        $qb = new QueryBuilder(
-            selects: ['u.id'],
-            from: 'users AS u',
-            joinConditions: [new Join('INNER JOIN user_groups AS ug', ['ug.id = u.group_id'])],
-        );
+        $qb = new QueryBuilder('users', 'u');
+        $qb->addSelect('u.id');
+        $qb->addJoinCondition('INNER', 'user_groups', 'ug', ['ug.id = u.group_id']);
 
         self::assertSame(
             expected: 'SELECT u.id FROM users AS u INNER JOIN user_groups AS ug ON (ug.id = u.group_id)',
             actual: $qb->getSQL(),
         );
 
-        $qb = new QueryBuilder(
-            selects: ['u.id'],
-            from: 'users AS u',
-        );
-        $qb->addJoinCondition('INNER JOIN user_groups AS ug', ['ug.id = u.group_id']);
+        $qb = new QueryBuilder('users', 'u');
+        $qb->addSelect('u.id');
+        $qb->addJoinCondition('INNER', 'user_groups', 'ug', ['ug.id = u.group_id']);
 
         self::assertSame(
             expected: 'SELECT u.id FROM users AS u INNER JOIN user_groups AS ug ON (ug.id = u.group_id)',
@@ -85,36 +80,29 @@ class QueryBuilderTest extends TestCase
 
     public function testWhere(): void
     {
-        $qb = new QueryBuilder(
-            selects: ['u.id'],
-            from: 'users AS u',
-            whereConditions: ['u.id = 1', 'u.id = 2']
-        );
+        $qb = new QueryBuilder('users', 'u');
+        $qb->addSelect('u.id');
+        $qb->addWhereCondition('u.id = 1');
+        $qb->addWhereCondition('u.id = 2');
 
         self::assertSame(
             expected: 'SELECT u.id FROM users AS u WHERE (u.id = 1 AND u.id = 2)',
             actual: $qb->getSQL(),
         );
 
-        $qb = new QueryBuilder(
-            selects: ['u.id'],
-            from: 'users AS u',
-            whereConditions: [new OrX(['u.id = 1', 'u.id = 2'])]
-        );
+        $qb = new QueryBuilder('users', 'u');
+        $qb->addSelect('u.id');
+        $qb->addWhereCondition(new OrX(['u.id = 1', 'u.id = 2']));
 
         self::assertSame(
             expected: 'SELECT u.id FROM users AS u WHERE ((u.id = 1 OR u.id = 2))',
             actual: $qb->getSQL(),
         );
 
-        $qb = new QueryBuilder(
-            selects: ['u.id'],
-            from: 'users AS u',
-            whereConditions: [
-                new OrX(['u.username = :bob', 'u.id = 1']),
-                'u.active = 1'
-            ],
-        );
+        $qb = new QueryBuilder('users', 'u');
+        $qb->addSelect('u.id');
+        $qb->addWhereCondition(new OrX(['u.username = :bob', 'u.id = 1']));
+        $qb->addWhereCondition('u.active = 1');
 
         self::assertSame(
             expected: 'SELECT u.id FROM users AS u WHERE ((u.username = :bob OR u.id = 1) AND u.active = 1)',
@@ -125,11 +113,9 @@ class QueryBuilderTest extends TestCase
         $condition->add(new OrX(['u.username = :bob', 'u.id = 1']));
         $condition->add('u.active = 1');
 
-        $qb = new QueryBuilder(
-            selects: ['u.id'],
-            from: 'users AS u',
-            whereConditions: [$condition],
-        );
+        $qb = new QueryBuilder('users', 'u');
+        $qb->addSelect('u.id');
+        $qb->addWhereCondition($condition);
 
         self::assertSame(
             expected: 'SELECT u.id FROM users AS u WHERE (((u.username = :bob OR u.id = 1) AND u.active = 1))',
@@ -139,11 +125,9 @@ class QueryBuilderTest extends TestCase
 
     public function testBasicIntParameters(): void
     {
-        $qb = new QueryBuilder(
-            selects: ['u.id'],
-            from: 'users AS u',
-            whereConditions: ['u.id = :id'],
-        );
+        $qb = new QueryBuilder('users', 'u');
+        $qb->addSelect('u.id');
+        $qb->addWhereCondition('u.id = :id');
         $qb->setParameter('id', 1);
 
         $pdoStatementMock = $this->createMock(PDOStatement::class);
@@ -154,17 +138,15 @@ class QueryBuilderTest extends TestCase
             'SELECT u.id FROM users AS u WHERE (u.id = ?)'
         )->willReturn($pdoStatementMock);
 
-        $databaseConnection = new DatabaseConnection($pdoMock);
+        $databaseConnection = new DatabaseConnection($pdoMock, new MySQLDriver());
         $stmt = $qb->createStatement($databaseConnection);
     }
 
     public function testBasicFloatParameters(): void
     {
-        $qb = new QueryBuilder(
-            selects: ['u.id'],
-            from: 'users AS u',
-            whereConditions: ['u.number = :float'],
-        );
+        $qb = new QueryBuilder('users', 'u');
+        $qb->addSelect('u.id');
+        $qb->addWhereCondition('u.number = :float');
         $qb->setParameter('float', 1.23456);
 
         $pdoStatementMock = $this->createMock(PDOStatement::class);
@@ -177,17 +159,16 @@ class QueryBuilderTest extends TestCase
             'SELECT u.id FROM users AS u WHERE (u.number = ?)'
         )->willReturn($pdoStatementMock);
 
-        $databaseConnection = new DatabaseConnection($pdoMock);
+        $databaseConnection = new DatabaseConnection($pdoMock, new MySQLDriver());
         $qb->createStatement($databaseConnection);
     }
 
     public function testBasicBoolParameters(): void
     {
-        $qb = new QueryBuilder(
-            selects: ['u.id'],
-            from: 'users AS u',
-            whereConditions: ['u.active = :yes', 'u.active = :no'],
-        );
+        $qb = new QueryBuilder('users', 'u');
+        $qb->addSelect('u.id');
+        $qb->addWhereCondition('u.active = :yes');
+        $qb->addWhereCondition('u.active = :no');
         $qb->setParameter('yes', true);
         $qb->setParameter('no', false);
 
@@ -202,17 +183,15 @@ class QueryBuilderTest extends TestCase
             'SELECT u.id FROM users AS u WHERE (u.active = ? AND u.active = ?)'
         )->willReturn($pdoStatementMock);
 
-        $databaseConnection = new DatabaseConnection($pdoMock);
+        $databaseConnection = new DatabaseConnection($pdoMock, new MySQLDriver());
         $qb->createStatement($databaseConnection);
     }
 
     public function testInParameterInts(): void
     {
-        $qb = new QueryBuilder(
-            selects: ['u.id'],
-            from: 'users AS u',
-            whereConditions: ['u.id IN(:ids)'],
-        );
+        $qb = new QueryBuilder('users', 'u');
+        $qb->addSelect('u.id');
+        $qb->addWhereCondition('u.id IN(:ids)');
         $qb->setParameter('ids', range(1, 5));
 
         $pdoStatementMock = $this->createMock(PDOStatement::class);
@@ -229,17 +208,15 @@ class QueryBuilderTest extends TestCase
             'SELECT u.id FROM users AS u WHERE (u.id IN(?,?,?,?,?))'
         )->willReturn($pdoStatementMock);
 
-        $databaseConnection = new DatabaseConnection($pdoMock);
+        $databaseConnection = new DatabaseConnection($pdoMock, new MySQLDriver());
         $stmt = $qb->createStatement($databaseConnection);
     }
 
     public function testInParameterString(): void
     {
-        $qb = new QueryBuilder(
-            selects: ['u.id'],
-            from: 'users AS u',
-            whereConditions: ['u.username IN(:usernames)'],
-        );
+        $qb = new QueryBuilder('users', 'u');
+        $qb->addSelect('u.id');
+        $qb->addWhereCondition('u.username IN(:usernames)');
         $qb->setParameter('usernames', ["username", "two"]);
 
         $pdoStatementMock = $this->createMock(PDOStatement::class);
@@ -253,23 +230,21 @@ class QueryBuilderTest extends TestCase
             'SELECT u.id FROM users AS u WHERE (u.username IN(?,?))'
         )->willReturn($pdoStatementMock);
 
-        $databaseConnection = new DatabaseConnection($pdoMock);
+        $databaseConnection = new DatabaseConnection($pdoMock, new MySQLDriver());
         $qb->createStatement($databaseConnection);
     }
 
     public function testUnhandledTypeNull(): void
     {
-        $qb = new QueryBuilder(
-            selects: ['u.id'],
-            from: 'users AS u',
-            whereConditions: ['u.username IN(:usernames)'],
-        );
+        $qb = new QueryBuilder('users', 'u');
+        $qb->addSelect('u.id');
+        $qb->addWhereCondition('u.username IN(:usernames)');
         $qb->setParameter('usernames', null);
 
         $pdoMock = $this->createMock(PDO::class);
         $pdoMock->expects(self::never())->method('prepare');
 
-        $databaseConnection = new DatabaseConnection($pdoMock);
+        $databaseConnection = new DatabaseConnection($pdoMock, new MySQLDriver());
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Unhandled type NULL');
@@ -278,17 +253,15 @@ class QueryBuilderTest extends TestCase
 
     public function testEmptyInParameter(): void
     {
-        $qb = new QueryBuilder(
-            selects: ['u.id'],
-            from: 'users AS u',
-            whereConditions: ['u.username IN(:usernames)'],
-        );
+        $qb = new QueryBuilder('users', 'u');
+        $qb->addSelect('u.id');
+        $qb->addWhereCondition('u.username IN(:usernames)');
         $qb->setParameter('usernames', []);
 
         $pdoMock = $this->createMock(PDO::class);
         $pdoMock->expects(self::never())->method('prepare');
 
-        $databaseConnection = new DatabaseConnection($pdoMock);
+        $databaseConnection = new DatabaseConnection($pdoMock, new MySQLDriver());
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Array parameter is empty!');
