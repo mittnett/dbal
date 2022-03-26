@@ -1,0 +1,15 @@
+FROM docker.io/library/composer:2 AS composer_builder
+
+FROM docker.io/library/php:8.0-cli
+
+RUN apt-get update && apt-get install --no-install-recommends -yqq bash git unzip \
+    && apt-get clean \
+    && rm -rf \
+	'/tmp/*' \
+	'/var/lib/apt/lists/*' \
+	'/var/tmp/*'
+
+COPY --from=composer_builder /usr/bin/composer /usr/local/bin/composer
+COPY container-entrypoint.sh /usr/bin/local/container-entrypoint
+
+ENTRYPOINT ["/usr/bin/local/container-entrypoint"]
