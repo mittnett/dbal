@@ -2,5 +2,5 @@
 
 set -e
 
-bin/podman-exec.sh vendor/bin/phpstan analyse
+bin/podman-exec.sh vendor/bin/phpstan analyse "$@"
 

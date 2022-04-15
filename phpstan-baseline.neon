@@ -1,0 +1,17 @@
+parameters:
+	ignoreErrors:
+		-
+			message: "#^Attribute class JetBrains\\\\PhpStorm\\\\Immutable does not exist\\.$#"
+			count: 1
+			path: src/Query/Join.php
+
+		-
+			message: "#^Attribute class JetBrains\\\\PhpStorm\\\\Immutable does not exist\\.$#"
+			count: 1
+			path: src/Query/Parameter.php
+
+		-
+			message: "#^Attribute class JetBrains\\\\PhpStorm\\\\Immutable does not exist\\.$#"
+			count: 1
+			path: src/Query/Select.php
+
