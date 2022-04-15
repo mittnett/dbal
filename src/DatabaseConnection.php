@@ -65,6 +65,11 @@ class DatabaseConnection implements DatabaseConnectionInterface
         return $this->pdo->beginTransaction();
     }
 
+    public function inTransaction(): bool
+    {
+        return $this->pdo->inTransaction();
+    }
+
     public function rollBack(): bool
     {
         return $this->pdo->rollBack();
