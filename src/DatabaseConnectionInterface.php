@@ -36,6 +36,7 @@ interface DatabaseConnectionInterface
     public function getLastInsertId(?string $name = null): string;
 
     public function beginTransaction(): bool;
+    public function inTransaction(): bool;
     public function rollBack(): bool;
     public function commit(): bool;
 }

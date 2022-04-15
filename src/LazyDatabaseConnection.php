@@ -68,6 +68,11 @@ class LazyDatabaseConnection implements DatabaseConnectionInterface
         return ($this->dbConnection ??= ($this->dbConnectionFactory)())->beginTransaction();
     }
 
+    public function inTransaction(): bool
+    {
+        return ($this->dbConnection ??= ($this->dbConnectionFactory)())->inTransaction();
+    }
+
     public function rollBack(): bool
     {
         return ($this->dbConnection ??= ($this->dbConnectionFactory)())->rollBack();
