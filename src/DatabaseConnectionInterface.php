@@ -26,7 +26,15 @@ interface DatabaseConnectionInterface
      */
     public function prepare(string $query): PDOStatement;
 
+    /**
+     * Returns the ID of the last inserted row or sequence value
+     *
+     * @param string|null $name Name of the sequence object from which the ID should be returned.
+     * @throws Exception\DBALException When \PDO::lastInsertId returns false.
+     * @return string
+     */
     public function getLastInsertId(?string $name = null): string;
+
     public function beginTransaction(): bool;
     public function rollBack(): bool;
     public function commit(): bool;
