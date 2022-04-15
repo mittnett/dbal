@@ -22,9 +22,18 @@ class DatabaseConnection implements DatabaseConnectionInterface
         return $this->driver;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function getLastInsertId(?string $name = null): string
     {
-        return $this->pdo->lastInsertId($name);
+        $id = $this->pdo->lastInsertId($name);
+
+        if ($id === false) {
+            throw new Exception\DBALException('Unable to get the insert id');
+        }
+
+        return $id;
     }
 
     /**

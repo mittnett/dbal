@@ -55,6 +55,9 @@ class LazyDatabaseConnection implements DatabaseConnectionInterface
         return ($this->dbConnection ??= ($this->dbConnectionFactory)())->prepare($query);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function getLastInsertId(?string $name = null): string
     {
         return ($this->dbConnection ??= ($this->dbConnectionFactory)())->getLastInsertId($name);
